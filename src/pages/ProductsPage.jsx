@@ -1,16 +1,28 @@
-// src/pages/ProductsPage.jsx
-import { useState } from 'react';
+// src/pages/ProductPage.jsx
+import { useEffect, useState } from "react";
 import { useQuery } from '@tanstack/react-query';
 import CardsGrid from "@components/CardsGrid";
 import productService from '@services/productService';
+import { getCategories } from '@services/categoryService';
 
 const PRODUCTS_PER_PAGE = 8;
 
-const ProductsPage = ({ onAddToCart }) => {
-  // Estado para controlar a página atual
+const ProductPage = ({ onAddToCart }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [categorias, setCategorias] = useState([]);
 
-  // Buscar produtos usando React Query
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getCategories();
+        setCategorias(data);
+      } catch (error) {
+        console.error('Erro ao buscar categorias:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const {
     data,
     isLoading,
@@ -22,14 +34,11 @@ const ProductsPage = ({ onAddToCart }) => {
     keepPreviousData: true,
   });
 
-  // Manipulador para mudança de página
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
-    // Rolar para o topo da página
     window.scrollTo(0, 0);
   };
 
-  // Renderização condicional para estados de carregamento e erro
   if (isLoading) {
     return (
       <div className="text-center my-5">
@@ -49,22 +58,24 @@ const ProductsPage = ({ onAddToCart }) => {
     );
   }
 
-  // Extrair dados da resposta
   const { products, totalPages } = data;
 
   return (
     <div>
-      {/* Grid de produtos */}
       <CardsGrid
         title="Todos os Produtos"
-        items={products}
+        items={products.map(produto => ({
+          ...produto,
+          categoria: categorias.find(cat => cat.id === produto.category_id)?.name || "Sem categoria"
+        }))}
         cols={4}
         onAddToCart={onAddToCart}
         currentPage={currentPage}
         totalPages={totalPages}
-        handlePageChange={handlePageChange} />
+        handlePageChange={handlePageChange}
+      />
     </div>
   );
 };
 
-export default ProductsPage;
+export default ProductPage;

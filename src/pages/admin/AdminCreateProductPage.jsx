@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import productService from '@services/productService';
+import { getCategories } from '@services/categoryService';
 
 const AdminCreateProductPage = () => {
     const navigate = useNavigate();
@@ -17,10 +18,24 @@ const AdminCreateProductPage = () => {
         price: '',
         image_file: null,
         image_preview: '',
-        image_url: ''
+        image_url: '',
+        category_id: ''
     });
 
     const [errors, setErrors] = useState({});
+    const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const data = await getCategories();
+                setCategories(data);
+            } catch (error) {
+                console.error('Erro ao buscar categorias:', error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     // Se for um produto para editar, inicializa o estado com os dados do produto
     useEffect(() => {
@@ -29,7 +44,8 @@ const AdminCreateProductPage = () => {
                 title: productToEdit.title,
                 description: productToEdit.description,
                 price: productToEdit.price,
-                image_url: productToEdit.image_url
+                image_url: productToEdit.image_url,
+                category_id: productToEdit.category_id
             });
         }
     }, [productToEdit]);
@@ -89,6 +105,9 @@ const AdminCreateProductPage = () => {
         }
         if (!product.image_file && !product.image_url) {
             newErrors.image_file = 'Selecione uma foto';
+        }
+        if (!product.category_id) {
+            newErrors.category_id = 'A categoria é obrigatória';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -160,6 +179,22 @@ const AdminCreateProductPage = () => {
                                     value={product.price}
                                     onChange={handleChange} />
                                 {errors.price && <div className="invalid-feedback">{errors.price}</div>}
+                            </div>
+                            <div className="mb-3">
+                                <label htmlFor="category_id" className="form-label">Categoria</label>
+                                <select
+                                    className={`form-control ${errors.category_id ? 'is-invalid' : ''}`}
+                                    id="category_id"
+                                    name="category_id"
+                                    value={product.category_id}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Selecione uma categoria</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                                {errors.category_id && <div className="invalid-feedback">{errors.category_id}</div>}
                             </div>
                             <div className="mb-3">
                                 <label className="form-label">Foto do produto</label><br />

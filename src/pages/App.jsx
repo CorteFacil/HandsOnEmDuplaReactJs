@@ -1,11 +1,14 @@
-// src/pages/App.jsx
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
+
 import Footer from "@components/Footer";
 import Header from "@components/Header";
+
 import HomePage from '@pages/HomePage';
 import ProductsPage from '@pages/ProductsPage';
+import CategoriaPage from '@pages/CategoriaPage'; // Import da página categorias
+
 import AdminCreateProductPage from '@pages/admin/AdminCreateProductPage';
 import AdminUsersPage from '@pages/admin/AdminUsersPage';
 import AdminRoute from '@components/AdminRoute';
@@ -38,57 +41,72 @@ function App() {
           <Routes>
             <Route
               path="/"
-              element={<HomePage onAddToCart={handleAddToCart} />} />
+              element={<HomePage onAddToCart={handleAddToCart} />}
+            />
+            <Route
+              path="/categorias"
+              element={<CategoriaPage />}
+            />
             <Route
               path="/login"
-              element={<LoginPage />} />
+              element={<LoginPage />}
+            />
             <Route
               path="/register"
-              element={<RegisterPage />} />
+              element={<RegisterPage />}
+            />
             <Route
               path="/forgot-password"
-              element={<ForgotPasswordPage />} />
+              element={<ForgotPasswordPage />}
+            />
             <Route
               path="/products"
-              element={<ProductsPage onAddToCart={handleAddToCart} />} />
+              element={<ProductsPage onAddToCart={handleAddToCart} />}
+            />
             <Route
               path="/update-password"
-              element={<UpdatePasswordPage />} />
+              element={<UpdatePasswordPage />}
+            />
             <Route
               path="/user/profile"
               element={
                 <ProtectedRoute>
                   <ProfilePage />
                 </ProtectedRoute>
-              } />
+              }
+            />
             <Route
               path="/admin/products"
               element={
                 <AdminRoute>
                   <AdminProductsPage />
                 </AdminRoute>
-              } />
+              }
+            />
             <Route
               path="/admin/products/new"
               element={
                 <AdminRoute>
                   <AdminCreateProductPage />
                 </AdminRoute>
-              } />
+              }
+            />
             <Route
               path="/admin/products/edit/:id"
               element={
                 <AdminRoute>
                   <AdminCreateProductPage />
                 </AdminRoute>
-              } />
+              }
+            />
             <Route            
               path="/admin/users"
               element={
                 <AdminRoute>
                   <AdminUsersPage />
                 </AdminRoute>
-              } />
+              }
+            />
           </Routes>
         </main>
         <Footer />

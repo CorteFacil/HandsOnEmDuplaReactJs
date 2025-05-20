@@ -25,8 +25,14 @@ const HomePage = ({ onAddToCart }) => {
           onAddToCart={onAddToCart}
         />
       )}
-      <div className="mt-4 text-center">
-        <a href="/produtos" className="btn btn-primary">Ver todos os produtos</a>
+
+      <div className="mt-4 text-center flex flex-col gap-2">
+        <a href="/produtos" className="btn btn-primary">
+          Ver todos os produtos
+        </a>
+        <a href="/categorias" className="btn btn-secondary">
+          Ver categorias
+        </a>
       </div>
     </div>
   );

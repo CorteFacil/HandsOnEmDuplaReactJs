@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import productService from '@services/productService';
+import { getCategories } from '@services/categoryService';
 import { toast } from 'react-hot-toast';
 
 const CreateProductPage = () => {
@@ -11,10 +12,24 @@ const CreateProductPage = () => {
         title: '',
         description: '',
         price: '',
-        image_url: ''
+        image_url: '',
+        category_id: ''
     });
 
     const [errors, setErrors] = useState({});
+    const [categories, setCategories] = useState([]);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const data = await getCategories();
+                setCategories(data);
+            } catch (error) {
+                console.error('Erro ao buscar categorias:', error);
+            }
+        };
+        fetchCategories();
+    }, []);
 
     const createProductMutation = useMutation({
         mutationFn: productService.createProduct,
@@ -64,6 +79,9 @@ const CreateProductPage = () => {
             newErrors.image_url = 'A URL da imagem é obrigatória';
         } else if (!product.image_url.match(/^https?:\/\/.+/i)) {
             newErrors.image_url = 'URL da imagem inválida';
+        }
+        if (!product.category_id) {
+            newErrors.category_id = 'A categoria é obrigatória';
         }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -138,6 +156,22 @@ const CreateProductPage = () => {
                                     placeholder="https://..."
                                 />
                                 {errors.image_url && <div className="invalid-feedback">{errors.image_url}</div>}
+                            </div>
+                            <div className="mb-3">
+                                <label htmlFor="category_id" className="form-label">Categoria</label>
+                                <select
+                                    className={`form-control ${errors.category_id ? 'is-invalid' : ''}`}
+                                    id="category_id"
+                                    name="category_id"
+                                    value={product.category_id}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Selecione uma categoria</option>
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                                    ))}
+                                </select>
+                                {errors.category_id && <div className="invalid-feedback">{errors.category_id}</div>}
                             </div>
                             {product.image_url && (
                                 <div className="mb-3 text-center">
