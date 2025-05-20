@@ -1,43 +1,18 @@
 // src/pages/ProductPage.jsx
-import { useEffect, useState } from "react";
 import { useQuery } from '@tanstack/react-query';
 import CardsGrid from "@components/CardsGrid";
 import productService from '@services/productService';
-import { getCategories } from '@services/categoryService';
-
-const PRODUCTS_PER_PAGE = 8;
 
 const ProductPage = ({ onAddToCart }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [categorias, setCategorias] = useState([]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const data = await getCategories();
-        setCategorias(data);
-      } catch (error) {
-        console.error('Erro ao buscar categorias:', error);
-      }
-    };
-    fetchCategories();
-  }, []);
-
   const {
-    data,
+    data: productsByCategory,
     isLoading,
     isError,
     error
   } = useQuery({
-    queryKey: ['products', currentPage],
-    queryFn: () => productService.getProductsByPage(currentPage, PRODUCTS_PER_PAGE),
-    keepPreviousData: true,
+    queryKey: ['productsByCategory'],
+    queryFn: () => productService.getProductsByCategory(),
   });
-
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-    window.scrollTo(0, 0);
-  };
 
   if (isLoading) {
     return (
@@ -58,22 +33,24 @@ const ProductPage = ({ onAddToCart }) => {
     );
   }
 
-  const { products, totalPages } = data;
-
   return (
     <div>
-      <CardsGrid
-        title="Todos os Produtos"
-        items={products.map(produto => ({
-          ...produto,
-          categoria: categorias.find(cat => cat.id === produto.category_id)?.name || "Sem categoria"
-        }))}
-        cols={4}
-        onAddToCart={onAddToCart}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        handlePageChange={handlePageChange}
-      />
+      <h1 className="mb-4">Nossos Produtos</h1>
+      
+      {productsByCategory.map(category => (
+        <div key={category.id} className="mb-5">
+          <h2 className="h3 mb-4">{category.name}</h2>
+          {category.products.length === 0 ? (
+            <p className="text-muted">Nenhum produto nesta categoria.</p>
+          ) : (
+            <CardsGrid
+              items={category.products}
+              cols={4}
+              onAddToCart={onAddToCart}
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 };

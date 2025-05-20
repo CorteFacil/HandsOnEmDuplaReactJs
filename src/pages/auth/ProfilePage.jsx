@@ -13,93 +13,123 @@ const ProfilePage = () => {
     const queryClient = useQueryClient();
     const fileRef = useRef(null);
     const { user } = useAuth();
-    // obtém dados do perfil do usuário logado
-    const { data: profile, isLoading } = useQuery({
-        queryKey: ['profile', user?.id],
-        queryFn: profileService.getProfile,
-        // Não executar a consulta se não houver usuário logado
-        enabled: !!user,
-        // Não usar cache entre sessões de usuários diferentes
-        staleTime: 0
-    });
-    // estado inicial do formulário
+
     const [form, setForm] = useState({
         full_name: '',
         phone: '',
-        avatar_file: null, // File | null
-        avatar_preview: 'https://placehold.co/40?text=Avatar', // data URL | bucket path
+        avatar_file: null,
+        avatar_preview: 'https://placehold.co/150?text=Avatar'
     });
+
     const [errors, setErrors] = useState({});
-    // sincroniza os dados do perfil com o estado do formulário
+
+    // Buscar perfil do usuário
+    const { data: profile, isLoading } = useQuery({
+        queryKey: ['profile', user?.id],
+        queryFn: profileService.getProfile,
+        enabled: !!user,
+        staleTime: 0
+    });
+
+    // Atualizar formulário quando o perfil for carregado
     useEffect(() => {
         if (!profile) return;
         setForm(f => ({
             ...f,
             full_name: profile.full_name ?? '',
             phone: profile.phone ?? '',
-            avatar_preview: profile.avatar_url || 'https://placehold.co/150?text=Avatar',    // já vem string
+            avatar_preview: profile.avatar_url || 'https://placehold.co/150?text=Avatar'
         }));
     }, [profile]);
-    // mutation para atualizar o perfil do usuário
+
+    // Mutation para atualizar perfil
     const updateMutation = useMutation({
         mutationFn: profileService.updateProfile,
-        onSuccess: () => {
-            toast.success('Perfil atualizado!', { icon: '✅' });
+        onSuccess: (data) => {
+            toast.success('Perfil atualizado com sucesso!', { icon: '✅' });
+            // Atualizar cache do React Query
             queryClient.invalidateQueries(['profile']);
+            // Atualizar preview com nova URL
+            if (data.avatar_url) {
+                setForm(prev => ({ ...prev, avatar_preview: data.avatar_url }));
+            }
         },
-        onError: err =>
-            toast.error(`Erro: ${err.message}`, { icon: '❌' }),
+        onError: (error) => {
+            toast.error(`Erro ao atualizar perfil: ${error.message}`, { icon: '❌' });
+        }
     });
-    // helpers
-    const handleChange = e => {
+
+    // Handler para mudança de campos do formulário
+    const handleChange = (e) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+        if (errors[name]) {
+            setErrors(prev => ({ ...prev, [name]: '' }));
+        }
     };
-    // função para lidar com a seleção de arquivos
-    const handleFileSelect = e => {
+
+    // Handler para seleção de arquivo
+    const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        // Validar tipo de arquivo
+        if (!file.type.startsWith('image/')) {
+            toast.error('Por favor, selecione uma imagem válida', { icon: '❌' });
+            return;
+        }
+
+        // Validar tamanho (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('A imagem deve ter no máximo 5MB', { icon: '❌' });
+            return;
+        }
+
         setForm(prev => ({ ...prev, avatar_file: file }));
-        // preview
+
+        // Criar preview
         const reader = new FileReader();
-        reader.onload = ev =>
+        reader.onload = (ev) => {
             setForm(prev => ({ ...prev, avatar_preview: ev.target.result }));
+        };
         reader.readAsDataURL(file);
     };
-    // validação básica do formulário
+
+    // Validação do formulário
     const validate = () => {
         const newErrors = {};
-        if (!form.full_name.trim())
+        if (!form.full_name.trim()) {
             newErrors.full_name = 'O nome é obrigatório';
-        if (form.phone && !phoneRegex.test(form.phone))
+        }
+        if (form.phone && !phoneRegex.test(form.phone)) {
             newErrors.phone = 'Telefone inválido';
+        }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    // submit
-    const handleSubmit = e => {
+
+    // Handler para submit do formulário
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!validate()) return;
+
         updateMutation.mutate({
             full_name: form.full_name.trim(),
             phone: form.phone,
-            file: form.avatar_file,
+            file: form.avatar_file
         });
     };
-    // user interface
+
     if (isLoading) {
         return (
             <div className="d-flex justify-content-center mt-5">
-                <div className="spinner-border" role="status"></div>
+                <div className="spinner-border" role="status">
+                    <span className="visually-hidden">Carregando...</span>
+                </div>
             </div>
         );
     }
-    // se usuário não estiver logado, retorna vazio
-    if (!user) {
-        return null; // já existe redireção em nível de rota protegida
-    }
-    // se estiver tudo certo, retorna o formulário
+
     return (
         <div className="row justify-content-center">
             <div className="col-md-10 col-lg-8">
@@ -109,21 +139,25 @@ const ProfilePage = () => {
                     </div>
                     <div className="card-body">
                         <form onSubmit={handleSubmit} noValidate>
-                            {/* avatar */}
+                            {/* Avatar */}
                             <div className="mb-4 text-center">
                                 <img
-                                    src={
-                                        form.avatar_preview ||
-                                        'https://placehold.co/150?text=Avatar&font=roboto'
-                                    }
+                                    src={form.avatar_preview}
                                     alt="Avatar"
-                                    className="rounded-circle mb-3"
-                                    style={{ width: 120, height: 120, objectFit: 'cover' }} />
+                                    className="rounded-circle mb-3 border"
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        objectFit: 'cover'
+                                    }}
+                                />
                                 <br />
                                 <button
                                     type="button"
-                                    className="btn btn-outline-secondary btn-sm"
-                                    onClick={() => fileRef.current?.click()}>
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={() => fileRef.current?.click()}
+                                    disabled={updateMutation.isPending}>
+                                    <i className="bi bi-camera me-2"></i>
                                     Alterar foto
                                 </button>
                                 <input
@@ -131,71 +165,62 @@ const ProfilePage = () => {
                                     accept="image/*"
                                     className="d-none"
                                     ref={fileRef}
-                                    onChange={handleFileSelect} />
+                                    onChange={handleFileSelect}
+                                />
+                                {form.avatar_file && (
+                                    <div className="mt-2">
+                                        <small className="text-muted">
+                                            Arquivo selecionado: {form.avatar_file.name}
+                                        </small>
+                                    </div>
+                                )}
                             </div>
-                            {/* nome completo */}
+
+                            {/* Nome completo */}
                             <div className="mb-3">
-                                <label htmlFor="full_name" className="form-label">
-                                    Nome completo
-                                </label>
+                                <label htmlFor="full_name" className="form-label">Nome completo</label>
                                 <input
+                                    type="text"
+                                    className={`form-control ${errors.full_name ? 'is-invalid' : ''}`}
                                     id="full_name"
                                     name="full_name"
-                                    className={`form-control ${errors.full_name ? 'is-invalid' : ''
-                                        }`}
                                     value={form.full_name}
-                                    onChange={handleChange} />
+                                    onChange={handleChange}
+                                    disabled={updateMutation.isPending}
+                                />
                                 {errors.full_name && (
                                     <div className="invalid-feedback">{errors.full_name}</div>
                                 )}
                             </div>
-                            {/* telefone */}
-                            <div className="mb-3">
-                                <label htmlFor="phone" className="form-label">
-                                    Telefone
-                                </label>
+
+                            {/* Telefone */}
+                            <div className="mb-4">
+                                <label htmlFor="phone" className="form-label">Telefone</label>
                                 <input
-                                    type="tel"
+                                    type="text"
+                                    className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                                     id="phone"
                                     name="phone"
-                                    placeholder="(99) 99999-9999"
-                                    className={`form-control ${errors.phone ? 'is-invalid' : ''}`}
                                     value={form.phone}
-                                    onChange={e => {
-                                        // Formatar o telefone manualmente
-                                        const value = e.target.value.replace(/\D/g, '');
-                                        let formattedValue = '';
-
-                                        if (value.length <= 2) {
-                                            formattedValue = value.length ? `(${value}` : '';
-                                        } else if (value.length <= 7) {
-                                            formattedValue = `(${value.slice(0, 2)}) ${value.slice(2)}`;
-                                        } else {
-                                            formattedValue = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
-                                        }
-
-                                        setForm(prev => ({ ...prev, phone: formattedValue }));
-                                        if (errors.phone) setErrors(prev => ({ ...prev, phone: '' }));
-                                    }}
+                                    onChange={handleChange}
+                                    placeholder="(99) 99999-9999"
+                                    disabled={updateMutation.isPending}
                                 />
                                 {errors.phone && (
                                     <div className="invalid-feedback">{errors.phone}</div>
                                 )}
                             </div>
-                            {/* ações */}
-                            <div className="d-flex">
+
+                            {/* Botões */}
+                            <div className="d-flex gap-2">
                                 <button
                                     type="submit"
-                                    className="btn btn-success me-2"
+                                    className="btn btn-success"
                                     disabled={updateMutation.isPending}>
                                     {updateMutation.isPending ? (
                                         <>
-                                            <span
-                                                className="spinner-border spinner-border-sm me-2"
-                                                role="status"
-                                                aria-hidden="true"
-                                            ></span>
-                                            Salvando…
+                                            <span className="spinner-border spinner-border-sm me-2" />
+                                            Salvando...
                                         </>
                                     ) : (
                                         'Salvar alterações'
@@ -203,8 +228,9 @@ const ProfilePage = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    className="btn btn-secondary"
-                                    onClick={() => navigate(-1)}>
+                                    className="btn btn-outline-secondary"
+                                    onClick={() => navigate(-1)}
+                                    disabled={updateMutation.isPending}>
                                     Voltar
                                 </button>
                             </div>

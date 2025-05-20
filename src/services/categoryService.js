@@ -1,4 +1,3 @@
-// src/services/categoryService.js
 import supabase from "./supabase";
 
 export const getCategories = async () => {

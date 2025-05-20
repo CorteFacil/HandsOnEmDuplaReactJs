@@ -106,7 +106,12 @@ const AdminProductsPage = () => {
                                                         src={product.image_url}
                                                         alt={product.title}
                                                         className="rounded"
-                                                        style={{ width: 'auto', height: '60px', }} />
+                                                        style={{ width: 'auto', height: '60px', }}
+                                                        onError={(e) => {
+                                                            e.target.onerror = null;
+                                                            e.target.src = 'https://placehold.co/400x300?text=Imagem+não+encontrada';
+                                                        }}
+                                                    />
                                                 </td>
                                                 <td>{product.title}</td>
                                                 <td className="one-line-cell">{formatPrice(product.price)}</td>

@@ -7,7 +7,7 @@ const productService = {
     
     const { data, error, count } = await supabase
       .from('products')
-      .select('*', { count: 'exact' })
+      .select('*, categories(name)', { count: 'exact' })
       .range(from, to)
       .order('title', { ascending: true });
     if (error) {
@@ -20,11 +20,39 @@ const productService = {
       totalPages: Math.ceil(count / limit)
     };
   },
+
+  async getProductsByCategory() {
+    const { data: categories } = await supabase
+      .from('categories')
+      .select('id, name');
+
+    if (!categories) {
+      throw new Error('Erro ao buscar categorias');
+    }
+
+    const { data: products, error } = await supabase
+      .from('products')
+      .select('*, categories(name)')
+      .order('title', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao buscar produtos:', error);
+      throw error;
+    }
+
+    // Agrupar produtos por categoria
+    const productsByCategory = categories.map(category => ({
+      ...category,
+      products: products.filter(product => product.category_id === category.id)
+    }));
+
+    return productsByCategory;
+  },
   
   async getProductById(id) {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('*, categories(name)')
       .eq('id', id)
       .single();
     if (error) {
@@ -35,28 +63,61 @@ const productService = {
   },
   
   async createProduct(product) {
-    const { data, error } = await supabase
+    const price = parseFloat(product.price);
+    const category_id = parseInt(product.category_id);
+
+    const { error } = await supabase
       .from('products')
-      .insert([product])
-      .select();
+      .insert({
+        title: product.title,
+        description: product.description,
+        price: price,
+        image_url: product.image_url,
+        category_id: category_id
+      });
+
     if (error) {
       console.error('Erro ao criar produto:', error);
       throw error;
     }
-    return data[0];
+
+    return {
+      title: product.title,
+      description: product.description,
+      price: price,
+      image_url: product.image_url,
+      category_id: category_id
+    };
   },
   
   async updateProduct(id, product) {
-    const { data, error } = await supabase
+    const price = parseFloat(product.price);
+    const category_id = parseInt(product.category_id);
+
+    const { error } = await supabase
       .from('products')
-      .update(product)
-      .eq('id', id)
-      .select();
+      .update({
+        title: product.title,
+        description: product.description,
+        price: price,
+        image_url: product.image_url,
+        category_id: category_id
+      })
+      .eq('id', id);
+
     if (error) {
       console.error('Erro ao atualizar produto:', error);
       throw error;
     }
-    return data[0];
+
+    return {
+      id,
+      title: product.title,
+      description: product.description,
+      price: price,
+      image_url: product.image_url,
+      category_id: category_id
+    };
   },
 
   async deleteProduct(id) {
@@ -69,6 +130,27 @@ const productService = {
       throw error;
     }
     return true;
+  },
+
+  async uploadImage(file) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `products/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('products')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error('Erro ao fazer upload da imagem:', uploadError);
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('products')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
   }
 };
 

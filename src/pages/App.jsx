@@ -7,7 +7,6 @@ import Header from "@components/Header";
 
 import HomePage from '@pages/HomePage';
 import ProductsPage from '@pages/ProductsPage';
-import CategoriaPage from '@pages/CategoriaPage'; // Import da página categorias
 
 import AdminCreateProductPage from '@pages/admin/AdminCreateProductPage';
 import AdminUsersPage from '@pages/admin/AdminUsersPage';
@@ -19,6 +18,7 @@ import ProfilePage from '@pages/auth/ProfilePage';
 import ForgotPasswordPage from '@pages/auth/ForgotPasswordPage';
 import UpdatePasswordPage from '@pages/auth/UpdatePasswordPage';
 import AdminProductsPage from '@pages/admin/AdminProductsPage';
+import AdminCategoriesPage from '@pages/admin/AdminCategoriesPage';
 
 function App() {
   const [cartItemCount, setCartItemCount] = useState(0);
@@ -44,8 +44,8 @@ function App() {
               element={<HomePage onAddToCart={handleAddToCart} />}
             />
             <Route
-              path="/categorias"
-              element={<CategoriaPage />}
+              path="/produtos"
+              element={<ProductsPage onAddToCart={handleAddToCart} />}
             />
             <Route
               path="/login"
@@ -58,10 +58,6 @@ function App() {
             <Route
               path="/forgot-password"
               element={<ForgotPasswordPage />}
-            />
-            <Route
-              path="/products"
-              element={<ProductsPage onAddToCart={handleAddToCart} />}
             />
             <Route
               path="/update-password"
@@ -104,6 +100,14 @@ function App() {
               element={
                 <AdminRoute>
                   <AdminUsersPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <AdminRoute>
+                  <AdminCategoriesPage />
                 </AdminRoute>
               }
             />

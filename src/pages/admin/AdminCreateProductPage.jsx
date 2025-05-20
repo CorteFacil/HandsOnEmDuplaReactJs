@@ -16,8 +16,6 @@ const AdminCreateProductPage = () => {
         title: '',
         description: '',
         price: '',
-        image_file: null,
-        image_preview: '',
         image_url: '',
         category_id: ''
     });
@@ -32,6 +30,7 @@ const AdminCreateProductPage = () => {
                 setCategories(data);
             } catch (error) {
                 console.error('Erro ao buscar categorias:', error);
+                toast.error('Erro ao carregar categorias', { icon: '❌' });
             }
         };
         fetchCategories();
@@ -78,7 +77,9 @@ const AdminCreateProductPage = () => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setProduct((prev) => ({ ...prev, [name]: value }));
+        // Converter category_id para número
+        const finalValue = name === 'category_id' ? parseInt(value) : value;
+        setProduct((prev) => ({ ...prev, [name]: finalValue }));
         if (errors[name]) {
             setErrors((prev) => ({ ...prev, [name]: '' }));
         }
@@ -87,7 +88,7 @@ const AdminCreateProductPage = () => {
     const handleFileSelect = e => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setProduct(p => ({ ...p, image_file: file, image_preview: URL.createObjectURL(file), image_url: '' }));
+        setProduct(p => ({ ...p, image_file: file, image_preview: URL.createObjectURL(file), url_imagem: '' }));
     };
 
     const validateForm = () => {
@@ -103,8 +104,8 @@ const AdminCreateProductPage = () => {
         } else if (isNaN(Number(product.price)) || Number(product.price) <= 0) {
             newErrors.price = 'O preço deve ser um número positivo';
         }
-        if (!product.image_file && !product.image_url) {
-            newErrors.image_file = 'Selecione uma foto';
+        if (!product.image_url) {
+            newErrors.image_url = 'A URL da imagem é obrigatória';
         }
         if (!product.category_id) {
             newErrors.category_id = 'A categoria é obrigatória';
@@ -118,14 +119,10 @@ const AdminCreateProductPage = () => {
         if (!validateForm()) return;
 
         try {
-            let path = product.image_url;
-            if (product.image_file) {
-                path = await productService.uploadImage(product.image_file);
-            }
-
-            const payload = { ...product, image_url: path, price: parseFloat(product.price) };
-            delete payload.image_file;
-            delete payload.image_preview;
+            const payload = { 
+                ...product, 
+                price: parseFloat(product.price)
+            };
 
             if (productToEdit) {
                 await updateProductMutation.mutateAsync({ id: productToEdit.id, ...payload });
@@ -154,7 +151,8 @@ const AdminCreateProductPage = () => {
                                     id="title"
                                     name="title"
                                     value={product.title}
-                                    onChange={handleChange} autoFocus />
+                                    onChange={handleChange}
+                                    autoFocus />
                                 {errors.title && <div className="invalid-feedback">{errors.title}</div>}
                             </div>
                             <div className="mb-3">
@@ -187,8 +185,7 @@ const AdminCreateProductPage = () => {
                                     id="category_id"
                                     name="category_id"
                                     value={product.category_id}
-                                    onChange={handleChange}
-                                >
+                                    onChange={handleChange}>
                                     <option value="">Selecione uma categoria</option>
                                     {categories.map(cat => (
                                         <option key={cat.id} value={cat.id}>{cat.name}</option>
@@ -197,22 +194,32 @@ const AdminCreateProductPage = () => {
                                 {errors.category_id && <div className="invalid-feedback">{errors.category_id}</div>}
                             </div>
                             <div className="mb-3">
-                                <label className="form-label">Foto do produto</label><br />
-                                <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => fileRef.current?.click()}>
-                                    Selecionar arquivo
-                                </button>
-                                <input type="file" accept="image/*" className="d-none" ref={fileRef} onChange={handleFileSelect} />
+                                <label htmlFor="image_url" className="form-label">URL da Imagem</label>
+                                <input
+                                    type="text"
+                                    className={`form-control ${errors.image_url ? 'is-invalid' : ''}`}
+                                    id="image_url"
+                                    name="image_url"
+                                    value={product.image_url}
+                                    onChange={handleChange}
+                                    placeholder="https://exemplo.com/imagem.jpg" />
+                                {errors.image_url && <div className="invalid-feedback">{errors.image_url}</div>}
                             </div>
 
-                            {product.image_preview || product.image_url ? (
+                            {product.image_url && (
                                 <div className="mb-3 text-start">
                                     <img
-                                        src={product.image_preview || product.image_url}
+                                        src={product.image_url}
                                         alt="Pré-visualização"
                                         className="img-thumbnail"
-                                        style={{ maxHeight: 200 }}/>
+                                        style={{ maxHeight: 200 }}
+                                        onError={(e) => {
+                                            e.target.onerror = null;
+                                            e.target.src = 'https://placehold.co/400x300?text=Imagem+não+encontrada';
+                                        }}
+                                    />
                                 </div>
-                            ) : null}
+                            )}
 
                             <div className="d-flex">
                                 <button
